@@ -32,7 +32,7 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  serverExternalPackages: ["@node-rs/argon2"],
+  serverExternalPackages: ["@node-rs/argon2", "bwip-js"],
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

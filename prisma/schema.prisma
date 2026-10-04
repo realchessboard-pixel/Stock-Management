@@ -96,6 +96,7 @@ model Business {
   barcodeSeq         Int      @default(0)
   purchaseSeq        Int      @default(0)
   saleSeq            Int      @default(0)
+  skuSeq             Int      @default(0)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 

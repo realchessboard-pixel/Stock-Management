@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Business" ADD COLUMN     "skuSeq" INTEGER NOT NULL DEFAULT 0;
