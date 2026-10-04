@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+/*
+ * StockFlow design tokens. Light, high-contrast theme: the app is used on
+ * phones in bright shops. Colours are referenced through Tailwind utilities
+ * (bg-brand-600, text-ink-muted, …) so they can be re-themed in one place.
+ */
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --color-brand-50: #eef6ff;
+  --color-brand-100: #d9eaff;
+  --color-brand-200: #bcdaff;
+  --color-brand-500: #2f7cf6;
+  --color-brand-600: #1f63e0;
+  --color-brand-700: #1a4fb5;
+  --color-brand-800: #1b438f;
+
+  --color-ink: #0f172a;
+  --color-ink-muted: #475569;
+  --color-ink-faint: #94a3b8;
+  --color-line: #e2e8f0;
+  --color-canvas: #f4f6fa;
+  --color-surface: #ffffff;
+
+  --color-ok-50: #ecfdf3;
+  --color-ok-600: #13834a;
+  --color-ok-700: #0f6b3c;
+  --color-warn-50: #fff8eb;
+  --color-warn-600: #b45309;
+  --color-danger-50: #fef2f2;
+  --color-danger-600: #dc2626;
+  --color-danger-700: #b91c1c;
+
+  --radius-card: 1rem;
+}
+
+:root {
+  color-scheme: light;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+/* Bigger, consistent focus ring for keyboard + external scanner users. */
+:focus-visible {
+  outline: 3px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+/* Remove number spinners: quantities are typed on a numeric keypad. */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}

@@ -1,0 +1,487 @@
+// StockFlow database schema.
+//
+// Tenant isolation rules:
+// - Every business-owned table has a non-null `businessId`.
+// - Uniqueness (SKU, barcode, names) is scoped per business.
+// - Relations between business-owned rows use COMPOSITE foreign keys
+//   (businessId, id), so the database itself rejects a row that points at
+//   another tenant's product/location/category, even if application code
+//   has a bug.
+//
+// Inventory rules:
+// - InventoryBalance is only ever changed together with a StockMovement row,
+//   inside one transaction (see src/server/inventory/engine.ts).
+// - StockMovement and AuditLog are append-only (enforced by DB triggers in
+//   the migration SQL).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────────────────────── Enums ─────────────────────────────
+
+enum Role {
+  OWNER
+  MANAGER
+  STAFF
+}
+
+enum Plan {
+  FREE
+  BASIC
+  PRO
+}
+
+enum MovementType {
+  OPENING
+  PURCHASE
+  SALE
+  CUSTOMER_RETURN
+  SUPPLIER_RETURN
+  DAMAGE
+  LOSS
+  ADJUSTMENT_IN
+  ADJUSTMENT_OUT
+  TRANSFER_IN
+  TRANSFER_OUT
+}
+
+enum MovementDirection {
+  IN
+  OUT
+}
+
+enum ReferenceType {
+  OPENING
+  PURCHASE
+  SALE
+  ADJUSTMENT
+  IMPORT
+  TRANSFER
+}
+
+enum BarcodeKind {
+  GENERATED
+  MANUFACTURER
+  MANUAL
+}
+
+enum LocationType {
+  STORE
+  WAREHOUSE
+  RACK
+  BIN
+}
+
+// ─────────────────────── Tenancy & identity ───────────────────────
+
+model Business {
+  id                 String   @id @default(cuid())
+  name               String
+  ownerName          String
+  phone              String?
+  email              String?
+  gstin              String?
+  address            String?
+  currency           String   @default("INR")
+  allowNegativeStock Boolean  @default(false)
+  plan               Plan     @default(FREE)
+  // Per-business counters. Incremented with UPDATE ... RETURNING inside
+  // transactions, so numbers are gap-tolerant but never duplicated.
+  barcodeSeq         Int      @default(0)
+  purchaseSeq        Int      @default(0)
+  saleSeq            Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  memberships   Membership[]
+  sessions      Session[]
+  categories    Category[]
+  brands        Brand[]
+  suppliers     Supplier[]
+  products      Product[]
+  barcodes      Barcode[]
+  locations     StockLocation[]
+  balances      InventoryBalance[]
+  movements     StockMovement[]
+  purchases     Purchase[]
+  purchaseItems PurchaseItem[]
+  sales         Sale[]
+  saleItems     SaleItem[]
+  auditLogs     AuditLog[]
+  idempotency   IdempotencyKey[]
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  // Stored normalised (lower-case email, E.164-ish digits for phone).
+  email        String?   @unique
+  phone        String?   @unique
+  passwordHash String
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  memberships Membership[]
+  sessions    Session[]
+  movements   StockMovement[]
+  auditLogs   AuditLog[]
+  purchases   Purchase[]
+  sales       Sale[]
+}
+
+/// A user's role inside one business. A user may belong to several shops.
+model Membership {
+  id         String   @id @default(cuid())
+  businessId String
+  userId     String
+  role       Role
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, userId])
+  @@index([userId])
+}
+
+/// Opaque server-side session. Only a hash of the cookie token is stored.
+model Session {
+  id         String   @id @default(cuid())
+  tokenHash  String   @unique
+  userId     String
+  businessId String
+  expiresAt  DateTime
+  lastSeenAt DateTime @default(now())
+  userAgent  String?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+/// Fixed-window rate limit counters (DB-backed so it works across instances).
+model RateLimitBucket {
+  key     String   @id
+  count   Int
+  resetAt DateTime
+}
+
+/// Makes mutations safe against double taps / retries. The key row is
+/// inserted inside the same transaction as the mutation it guards.
+model IdempotencyKey {
+  businessId String
+  key        String
+  operation  String
+  result     Json?
+  createdAt  DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@id([businessId, key])
+  @@index([createdAt])
+}
+
+// ───────────────────────── Master data ─────────────────────────
+
+model Category {
+  id          String   @id @default(cuid())
+  businessId  String
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  business Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  products Product[]
+
+  @@unique([businessId, id])
+  @@unique([businessId, name])
+}
+
+model Brand {
+  id         String   @id @default(cuid())
+  businessId String
+  name       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  business Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  products Product[]
+
+  @@unique([businessId, id])
+  @@unique([businessId, name])
+}
+
+model Supplier {
+  id         String   @id @default(cuid())
+  businessId String
+  name       String
+  company    String?
+  phone      String?
+  email      String?
+  address    String?
+  gstin      String?
+  notes      String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  business  Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  products  Product[]
+  purchases Purchase[]
+
+  @@unique([businessId, id])
+  @@index([businessId, name])
+}
+
+model Product {
+  id                  String    @id @default(cuid())
+  businessId          String
+  name                String
+  sku                 String
+  description         String?
+  unit                String    @default("pcs")
+  purchasePrice       Decimal   @default(0) @db.Decimal(12, 2)
+  sellingPrice        Decimal   @default(0) @db.Decimal(12, 2)
+  mrp                 Decimal?  @db.Decimal(12, 2)
+  minStock            Decimal   @default(0) @db.Decimal(14, 3)
+  gstRate             Decimal   @default(0) @db.Decimal(5, 2)
+  hsnSac              String?
+  imageUrl            String?
+  isActive            Boolean   @default(true)
+  archivedAt          DateTime?
+  categoryId          String?
+  brandId             String?
+  preferredSupplierId String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  business          Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  category          Category? @relation(fields: [businessId, categoryId], references: [businessId, id], onDelete: Restrict, map: "Product_category_fkey")
+  brand             Brand?    @relation(fields: [businessId, brandId], references: [businessId, id], onDelete: Restrict, map: "Product_brand_fkey")
+  preferredSupplier Supplier? @relation(fields: [businessId, preferredSupplierId], references: [businessId, id], onDelete: Restrict, map: "Product_supplier_fkey")
+
+  barcodes      Barcode[]
+  balances      InventoryBalance[]
+  movements     StockMovement[]
+  purchaseItems PurchaseItem[]
+  saleItems     SaleItem[]
+
+  @@unique([businessId, id])
+  @@unique([businessId, sku])
+  @@index([businessId, isActive, name])
+  @@index([businessId, categoryId])
+  @@index([businessId, brandId])
+  @@index([businessId, createdAt])
+  // Trigram indexes for fast "contains" search (pg_trgm, created in migration).
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "Product_name_trgm_idx")
+  @@index([sku(ops: raw("gin_trgm_ops"))], type: Gin, map: "Product_sku_trgm_idx")
+}
+
+model Barcode {
+  id         String      @id @default(cuid())
+  businessId String
+  productId  String
+  code       String
+  kind       BarcodeKind
+  createdAt  DateTime    @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [businessId, productId], references: [businessId, id], onDelete: Cascade, map: "Barcode_product_fkey")
+
+  // Scanning is the hot path: (businessId, code) is a unique index lookup.
+  @@unique([businessId, code])
+  // MVP: one barcode per product. Drop this to allow several later.
+  @@unique([productId])
+}
+
+model StockLocation {
+  id         String       @id @default(cuid())
+  businessId String
+  name       String
+  code       String?
+  type       LocationType @default(STORE)
+  parentId   String?
+  isDefault  Boolean      @default(false)
+  isActive   Boolean      @default(true)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  business Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  parent   StockLocation?  @relation("LocationTree", fields: [businessId, parentId], references: [businessId, id], onDelete: Restrict, map: "StockLocation_parent_fkey")
+  children StockLocation[] @relation("LocationTree")
+
+  balances  InventoryBalance[]
+  movements StockMovement[]
+  purchases Purchase[]
+
+  @@unique([businessId, id])
+  @@index([businessId, parentId])
+}
+
+// ─────────────────────────── Inventory ───────────────────────────
+
+/// Current quantity of one product at one location. Never edited directly:
+/// only the stock movement engine writes here.
+model InventoryBalance {
+  id         String   @id @default(cuid())
+  businessId String
+  productId  String
+  locationId String
+  quantity   Decimal  @default(0) @db.Decimal(14, 3)
+  updatedAt  DateTime @updatedAt
+
+  business Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  product  Product       @relation(fields: [businessId, productId], references: [businessId, id], onDelete: Restrict, map: "InventoryBalance_product_fkey")
+  location StockLocation @relation(fields: [businessId, locationId], references: [businessId, id], onDelete: Restrict, map: "InventoryBalance_location_fkey")
+
+  @@unique([productId, locationId])
+  @@index([businessId, locationId])
+}
+
+/// Append-only stock ledger.
+model StockMovement {
+  id              String            @id @default(cuid())
+  businessId      String
+  productId       String
+  locationId      String
+  type            MovementType
+  direction       MovementDirection
+  /// Always positive; `direction` gives the sign.
+  quantity        Decimal           @db.Decimal(14, 3)
+  previousBalance Decimal           @db.Decimal(14, 3)
+  newBalance      Decimal           @db.Decimal(14, 3)
+  unitCost        Decimal?          @db.Decimal(12, 2)
+  unitPrice       Decimal?          @db.Decimal(12, 2)
+  referenceType   ReferenceType?
+  referenceId     String?
+  reason          String?
+  userId          String
+  createdAt       DateTime          @default(now())
+
+  business Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  product  Product       @relation(fields: [businessId, productId], references: [businessId, id], onDelete: Restrict, map: "StockMovement_product_fkey")
+  location StockLocation @relation(fields: [businessId, locationId], references: [businessId, id], onDelete: Restrict, map: "StockMovement_location_fkey")
+  user     User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([businessId, productId, createdAt])
+  @@index([businessId, createdAt])
+  @@index([businessId, type, createdAt])
+  @@index([businessId, userId, createdAt])
+  @@index([referenceType, referenceId])
+}
+
+// ─────────────── Documents (minimal now, grow into POS / PO) ───────────────
+
+model Purchase {
+  id          String   @id @default(cuid())
+  businessId  String
+  number      Int
+  supplierId  String?
+  locationId  String
+  invoiceNo   String?
+  notes       String?
+  totalAmount Decimal  @default(0) @db.Decimal(14, 2)
+  createdById String
+  createdAt   DateTime @default(now())
+
+  business  Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  supplier  Supplier?      @relation(fields: [businessId, supplierId], references: [businessId, id], onDelete: Restrict, map: "Purchase_supplier_fkey")
+  location  StockLocation  @relation(fields: [businessId, locationId], references: [businessId, id], onDelete: Restrict, map: "Purchase_location_fkey")
+  createdBy User           @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  items     PurchaseItem[]
+
+  @@unique([businessId, id])
+  @@unique([businessId, number])
+  @@index([businessId, createdAt])
+  @@index([businessId, supplierId])
+}
+
+model PurchaseItem {
+  id         String  @id @default(cuid())
+  businessId String
+  purchaseId String
+  productId  String
+  quantity   Decimal @db.Decimal(14, 3)
+  unitCost   Decimal @db.Decimal(12, 2)
+  lineTotal  Decimal @db.Decimal(14, 2)
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  purchase Purchase @relation(fields: [businessId, purchaseId], references: [businessId, id], onDelete: Cascade, map: "PurchaseItem_purchase_fkey")
+  product  Product  @relation(fields: [businessId, productId], references: [businessId, id], onDelete: Restrict, map: "PurchaseItem_product_fkey")
+
+  @@index([businessId, productId])
+  @@index([purchaseId])
+}
+
+model Sale {
+  id           String   @id @default(cuid())
+  businessId   String
+  number       Int
+  customerName String?
+  notes        String?
+  totalAmount  Decimal  @default(0) @db.Decimal(14, 2)
+  createdById  String
+  createdAt    DateTime @default(now())
+
+  business  Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  createdBy User       @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  items     SaleItem[]
+
+  @@unique([businessId, id])
+  @@unique([businessId, number])
+  @@index([businessId, createdAt])
+}
+
+model SaleItem {
+  id         String  @id @default(cuid())
+  businessId String
+  saleId     String
+  productId  String
+  quantity   Decimal @db.Decimal(14, 3)
+  unitPrice  Decimal @db.Decimal(12, 2)
+  lineTotal  Decimal @db.Decimal(14, 2)
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  sale     Sale     @relation(fields: [businessId, saleId], references: [businessId, id], onDelete: Cascade, map: "SaleItem_sale_fkey")
+  product  Product  @relation(fields: [businessId, productId], references: [businessId, id], onDelete: Restrict, map: "SaleItem_product_fkey")
+
+  @@index([businessId, productId])
+  @@index([saleId])
+}
+
+// ──────────────────────────── Audit ────────────────────────────
+
+/// Append-only. No application code path updates or deletes these rows,
+/// and a DB trigger rejects UPDATE/DELETE.
+model AuditLog {
+  id         String   @id @default(cuid())
+  businessId String
+  userId     String?
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user     User?    @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([businessId, createdAt])
+  @@index([businessId, entityType, entityId])
+}

@@ -1,0 +1,28 @@
+"use client";
+
+import { useFormStatus } from "react-dom";
+import type { ComponentProps } from "react";
+import { Button } from "./button";
+import { Spinner } from "./spinner";
+
+/** Disables itself while the form is submitting, preventing double taps. */
+export function SubmitButton({
+  children,
+  pendingText,
+  pending: pendingProp,
+  ...props
+}: ComponentProps<typeof Button> & { pendingText?: string; pending?: boolean }) {
+  const status = useFormStatus();
+  const pending = pendingProp ?? status.pending;
+  return (
+    <Button type="submit" disabled={pending || props.disabled} aria-busy={pending} {...props}>
+      {pending ? (
+        <>
+          <Spinner /> {pendingText ?? "Please wait…"}
+        </>
+      ) : (
+        children
+      )}
+    </Button>
+  );
+}
