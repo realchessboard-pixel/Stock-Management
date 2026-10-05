@@ -35,7 +35,11 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@node-rs/argon2", "bwip-js", "exceljs"],
   experimental: {
     // Product import files (max 5 MB) are sent to a Server Action.
-    serverActions: { bodySizeLimit: "6mb" },
+    serverActions: {
+      bodySizeLimit: "6mb",
+      // When served through a tunnel/reverse proxy (e.g. Tailscale Funnel), accept its public host.
+      allowedOrigins: process.env.PUBLIC_URL ? [new URL(process.env.PUBLIC_URL).host] : undefined,
+    },
   },
   async headers() {
     return [

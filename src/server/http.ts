@@ -8,8 +8,10 @@ export function isSameOrigin(req: Request): boolean {
   const origin = req.headers.get("origin");
   if (!origin) return false;
   try {
+    const originHost = new URL(origin).host;
     const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
-    return new URL(origin).host === host;
+    const publicHost = process.env.PUBLIC_URL ? new URL(process.env.PUBLIC_URL).host : null;
+    return originHost === host || originHost === publicHost;
   } catch {
     return false;
   }

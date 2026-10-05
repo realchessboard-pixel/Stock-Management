@@ -4,6 +4,12 @@ Mobile-first inventory management for small shops: **scan → receive / remove �
 
 See [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) for architecture and the phase plan.
 
+## Run it on your own computer (no hosting)
+
+See **[docs/LOCAL_SETUP.md](docs/LOCAL_SETUP.md)** — needs only Node.js; the database is bundled
+(`embedded-postgres`), phones connect from anywhere over HTTPS via Tailscale Funnel, nightly
+backups and auto-restart are built in.
+
 ## Local development
 
 Requirements: Node 22 (see `.nvmrc`), PostgreSQL 14+.

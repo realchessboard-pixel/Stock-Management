@@ -52,3 +52,6 @@ next-env.d.ts
 /tests/e2e/.tmp
 /test-results
 /playwright-report
+
+# StockFlow Local data (database, photos, backups)
+/stockflow-data
