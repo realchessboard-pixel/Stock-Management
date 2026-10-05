@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PackagePlus, PackageSearch, Plus } from "lucide-react";
+import { Download, PackagePlus, PackageSearch, Plus, Upload } from "lucide-react";
 import { NoAccess } from "@/components/common/no-access";
 import { ProductList } from "@/components/products/product-list";
 import { ButtonLink } from "@/components/ui/button";
@@ -51,6 +51,20 @@ export default async function ProductsPage({ searchParams }: PageProps<"/product
         subtitle={`${data.total} ${data.total === 1 ? "product" : "products"}`}
         actions={canWrite ? <ButtonLink href="/products/new" size="md"><Plus className="size-5" aria-hidden /> Add</ButtonLink> : null}
       />
+      {can(ctx, "product.import") || can(ctx, "product.export") ? (
+        <div className="-mt-2 mb-4 flex gap-2">
+          {can(ctx, "product.import") ? (
+            <Link href="/products/import" className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-line bg-surface px-3 text-sm font-semibold">
+              <Upload className="size-4" aria-hidden /> Import
+            </Link>
+          ) : null}
+          {can(ctx, "product.export") ? (
+            <a href="/api/products/export" download className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-line bg-surface px-3 text-sm font-semibold">
+              <Download className="size-4" aria-hidden /> Export CSV
+            </a>
+          ) : null}
+        </div>
+      ) : null}
       <div className="space-y-3">
         <SearchBox placeholder="Search name, SKU, barcode, brand…" />
         <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
@@ -84,8 +98,8 @@ export default async function ProductsPage({ searchParams }: PageProps<"/product
             <EmptyState icon={PackageSearch} title="No matching products" description="Try a different search or clear the filters."
               action={<ButtonLink href="/products" variant="secondary">Clear filters</ButtonLink>} />
           ) : (
-            <EmptyState icon={PackagePlus} title="No products yet" description="Add your first product to start tracking stock."
-              action={canWrite ? <ButtonLink href="/products/new">Add product</ButtonLink> : undefined} />
+            <EmptyState icon={PackagePlus} title="No products yet" description="Add your first product, or import your whole list from Excel."
+              action={canWrite ? <div className="flex flex-wrap justify-center gap-2"><ButtonLink href="/products/new">Add product</ButtonLink><ButtonLink href="/products/import" variant="secondary">Import from Excel</ButtonLink></div> : undefined} />
           )
         ) : (
           <>

@@ -51,7 +51,12 @@ export const productFields = {
   minStock: quantityOrZero("Minimum stock"),
   imageUrl: z.preprocess(
     (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
-    z.string().trim().url("Enter a full image link starting with https://").startsWith("https://", "Image link must start with https://").max(500).optional(),
+    z
+      .string()
+      .trim()
+      .max(500)
+      .refine((v) => /^\/api\/files\/[a-z0-9]+\/[a-f0-9-]{36}\.(jpg|png|webp)$/.test(v) || (/^https:\/\//.test(v) && z.string().url().safeParse(v).success), "Upload a photo or enter a link starting with https://")
+      .optional(),
   ),
 };
 

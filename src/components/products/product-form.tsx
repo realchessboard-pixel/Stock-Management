@@ -10,6 +10,7 @@ import { SelectField } from "@/components/ui/select";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { TextareaField } from "@/components/ui/textarea";
 import { useFormAction } from "@/hooks/use-form-action";
+import { PhotoInput } from "./photo-input";
 import { cn } from "@/lib/cn";
 import { GST_RATES, UNITS } from "@/lib/validation/catalog";
 import { createProductAction, updateProductAction } from "@/server/actions/catalog";
@@ -176,7 +177,7 @@ export function ProductForm({
 
       <details className="group rounded-[var(--radius-card)] border border-line bg-surface shadow-sm" open={hasErrorsInMore || undefined}>
         <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between px-4 font-semibold">
-          More details <span className="text-sm font-normal text-ink-muted group-open:hidden">SKU, supplier, HSN, photo</span>
+          More details <span className="text-sm font-normal text-ink-muted group-open:hidden">Photo, SKU, supplier, HSN</span>
         </summary>
         <div className="space-y-4 border-t border-line p-4">
           <Field label="SKU" name="sku" defaultValue={defaults.sku ?? ""} placeholder={mode === "create" ? "Leave blank to auto-generate" : ""} autoCapitalize="characters" autoComplete="off" error={fe?.sku} />
@@ -188,7 +189,7 @@ export function ProductForm({
           </SelectField>
           <Field label="HSN / SAC code" name="hsnSac" inputMode="numeric" defaultValue={defaults.hsnSac ?? ""} placeholder="e.g. 8302" error={fe?.hsnSac} />
           <TextareaField label="Description" name="description" defaultValue={defaults.description ?? ""} error={fe?.description} />
-          <Field label="Photo link" name="imageUrl" type="url" defaultValue={defaults.imageUrl ?? ""} placeholder="https://…" error={fe?.imageUrl} />
+          <PhotoInput name="imageUrl" defaultValue={defaults.imageUrl} error={fe?.imageUrl} />
         </div>
       </details>
 

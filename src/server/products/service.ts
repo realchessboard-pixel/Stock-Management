@@ -15,8 +15,11 @@ import type { TenantContext } from "@/server/tenancy/context";
 
 export const PRODUCT_PAGE_SIZE = 25;
 
-/** Ensures referenced category/supplier belong to this business (friendly error before the FK would fire). */
-async function assertRefs(tx: Tx, ctx: TenantContext, refs: { categoryId?: string; preferredSupplierId?: string }) {
+/** Ensures referenced category/supplier/photo belong to this business (friendly error before the FK would fire). */
+async function assertRefs(tx: Tx, ctx: TenantContext, refs: { categoryId?: string; preferredSupplierId?: string; imageUrl?: string }) {
+  if (refs.imageUrl?.startsWith("/api/files/") && !refs.imageUrl.startsWith(`/api/files/${ctx.businessId}/`)) {
+    throw new AppError("VALIDATION", undefined, { fieldErrors: { imageUrl: ["Upload the photo again"] } });
+  }
   if (refs.categoryId) {
     const ok = await tx.category.findFirst({ where: { id: refs.categoryId, businessId: ctx.businessId }, select: { id: true } });
     if (!ok) throw new AppError("VALIDATION", undefined, { fieldErrors: { categoryId: ["Choose a valid category"] } });

@@ -32,7 +32,11 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  serverExternalPackages: ["@node-rs/argon2", "bwip-js"],
+  serverExternalPackages: ["@node-rs/argon2", "bwip-js", "exceljs"],
+  experimental: {
+    // Product import files (max 5 MB) are sent to a Server Action.
+    serverActions: { bodySizeLimit: "6mb" },
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
