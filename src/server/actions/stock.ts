@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { ActionResult } from "@/lib/result";
 import { adjustStockSchema, receiveStockSchema, stockOutSchema } from "@/lib/validation/stock";
 import { adjustStock, receiveStock, stockOut } from "@/server/inventory/operations";
+import { notifyStockChange } from "@/server/notifications";
 import { assertCan } from "@/server/permissions";
 import { findProductByCode, listProducts } from "@/server/products/service";
 import { toSummary, type ProductSummary } from "@/server/products/summary";
@@ -19,20 +20,23 @@ function revalidateStock(productId: string) {
 }
 
 export const receiveStockAction = tenantAction({ schema: receiveStockSchema, permission: "stock.receive" }, async (ctx, input) => {
-  const { result } = await receiveStock(ctx, input);
+  const { result, replayed } = await receiveStock(ctx, input);
   revalidateStock(input.productId);
+  if (!replayed) await notifyStockChange(ctx, result);
   return result;
 });
 
 export const stockOutAction = tenantAction({ schema: stockOutSchema, permission: "stock.out" }, async (ctx, input) => {
-  const { result } = await stockOut(ctx, input);
+  const { result, replayed } = await stockOut(ctx, input);
   revalidateStock(input.productId);
+  if (!replayed) await notifyStockChange(ctx, result);
   return result;
 });
 
 export const adjustStockAction = tenantAction({ schema: adjustStockSchema, permission: "stock.adjust" }, async (ctx, input) => {
-  const { result } = await adjustStock(ctx, input);
+  const { result, replayed } = await adjustStock(ctx, input);
   revalidateStock(input.productId);
+  if (!replayed) await notifyStockChange(ctx, result);
   return result;
 });
 

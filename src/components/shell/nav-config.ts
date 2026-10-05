@@ -34,6 +34,7 @@ export const SIDEBAR_NAV: NavItem[] = [
   { href: "/products", label: "Products", icon: Package, permission: "product.view" },
   { href: "/inventory", label: "Inventory", icon: Boxes, permission: "product.view" },
   { href: "/movements", label: "Stock Movements", icon: ArrowLeftRight, permission: "product.view" },
+  { href: "/low-stock", label: "Low Stock", icon: ClipboardList, permission: "product.view" },
   { href: "/suppliers", label: "Suppliers", icon: Truck, permission: "supplier.view" },
   { href: "/categories", label: "Categories", icon: Tags, permission: "category.write" },
   { href: "/locations", label: "Locations", icon: MapPin, permission: "location.write" },
@@ -45,7 +46,6 @@ export const SIDEBAR_NAV: NavItem[] = [
 
 /** "More" page on mobile: everything not in the bottom bar. */
 export const MORE_NAV: NavItem[] = [
-  { href: "/low-stock", label: "Low stock", icon: ClipboardList, permission: "product.view" },
   ...SIDEBAR_NAV.filter((i) => !["/dashboard", "/products", "/movements"].includes(i.href)),
 ];
 
