@@ -9,6 +9,7 @@ import { assertWithinLimit } from "@/server/billing/entitlements";
 import { resolveBrandId } from "@/server/catalog/brands";
 import { db, type Tx } from "@/server/db";
 import { runIdempotent } from "@/server/idempotency";
+import { postOpeningStock } from "@/server/inventory/operations";
 import { isUniqueViolation } from "@/server/prisma-errors";
 import type { TenantContext } from "@/server/tenancy/context";
 
@@ -36,7 +37,7 @@ async function assertSkuFree(tx: Tx, ctx: TenantContext, sku: string, exceptId?:
   }
 }
 
-function productData(input: Omit<CreateProductInput, "idempotencyKey" | "barcodeMode" | "barcode" | "brandName" | "sku">) {
+function productData(input: Omit<CreateProductInput, "idempotencyKey" | "barcodeMode" | "barcode" | "brandName" | "sku" | "openingQuantity" | "openingLocationId">) {
   return {
     name: input.name,
     description: input.description ?? null,
@@ -63,8 +64,9 @@ function mapUniqueErrors(e: unknown): never {
  * Creates a product (and its barcode). Idempotent on `idempotencyKey`, so a
  * double tap on "Save" creates one product, not two.
  *
- * `afterCreate` lets callers add work inside the same transaction (Phase 3
- * uses it to post opening stock), keeping product + stock atomic.
+ * Opening stock (if given) is posted as an OPENING movement in the same
+ * transaction, so the product and its first stock appear together or not at all.
+ * `afterCreate` lets callers (e.g. import) add more work to that transaction.
  */
 export async function createProduct(
   ctx: TenantContext,
@@ -100,6 +102,9 @@ export async function createProduct(
         entityId: product.id,
         metadata: { name: product.name, sku, barcode: barcode?.code ?? null },
       });
+      if (input.openingQuantity && Number(input.openingQuantity) > 0) {
+        await postOpeningStock(tx, ctx, product.id, input.openingQuantity, input.openingLocationId);
+      }
       if (afterCreate) await afterCreate(tx, product);
       return { id: product.id };
     });

@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { listBrands } from "@/server/catalog/brands";
 import { listCategories } from "@/server/catalog/categories";
 import { supplierOptions } from "@/server/catalog/suppliers";
+import { locationOptions } from "@/server/locations/options";
 import { pageAccess } from "@/server/tenancy/page-guard";
 
 export const metadata: Metadata = { title: "Add product" };
@@ -14,7 +15,7 @@ export default async function NewProductPage({ searchParams }: PageProps<"/produ
   const { ctx, allowed } = await pageAccess("product.write");
   if (!allowed) return <NoAccess />;
   const { barcode } = await searchParams;
-  const [categories, brands, suppliers] = await Promise.all([listCategories(ctx), listBrands(ctx), supplierOptions(ctx)]);
+  const [categories, brands, suppliers, locations] = await Promise.all([listCategories(ctx), listBrands(ctx), supplierOptions(ctx), locationOptions(ctx)]);
   return (
     <div className="mx-auto max-w-2xl">
       <PageHeader title="Add product" />
@@ -25,6 +26,7 @@ export default async function NewProductPage({ searchParams }: PageProps<"/produ
         categories={categories}
         brands={brands}
         suppliers={suppliers}
+        locations={locations}
         initialBarcode={typeof barcode === "string" ? barcode.slice(0, 48) : undefined}
       />
     </div>

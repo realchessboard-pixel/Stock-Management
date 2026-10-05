@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { optionalText, requiredText } from "./common";
+import { openingStockFields } from "./stock";
 import { moneyOrZero, optionalMoney, percent, quantityOrZero } from "./numbers";
 
 export const UNITS = ["pcs", "set", "pair", "box", "pack", "dozen", "kg", "g", "m", "ft", "l", "roll", "sheet"] as const;
@@ -73,7 +74,7 @@ function refineProduct<T extends { mrp?: string; sellingPrice: string; barcodeMo
 }
 
 export const createProductSchema = z
-  .object({ ...productFields, ...barcodeChoice, idempotencyKey: z.string().uuid() })
+  .object({ ...productFields, ...barcodeChoice, ...openingStockFields, idempotencyKey: z.string().uuid() })
   .superRefine(refineProduct);
 export type CreateProductInput = z.infer<typeof createProductSchema>;
 

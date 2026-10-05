@@ -49,6 +49,7 @@ export function ProductForm({
   brands,
   suppliers,
   initialBarcode,
+  locations = [],
 }: {
   mode: "create" | "edit";
   defaults?: ProductFormDefaults;
@@ -57,6 +58,7 @@ export function ProductForm({
   brands: Option[];
   suppliers: Option[];
   initialBarcode?: string;
+  locations?: { id: string; name: string; isDefault: boolean }[];
 }) {
   const router = useRouter();
   const action = mode === "create" ? createProductAction : updateProductAction;
@@ -127,7 +129,20 @@ export function ProductForm({
       </Card>
 
       <Card className="space-y-4">
-        <h2 className="text-base font-semibold">Stock alert</h2>
+        <h2 className="text-base font-semibold">Stock</h2>
+        {mode === "create" ? (
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Opening stock" name="openingQuantity" inputMode="decimal" placeholder="0"
+              hint="How many you have right now." error={fe?.openingQuantity} />
+            {locations.length > 1 ? (
+              <SelectField label="Kept at" name="openingLocationId" defaultValue={locations.find((l) => l.isDefault)?.id} error={fe?.openingLocationId}>
+                {locations.map((l) => (
+                  <option key={l.id} value={l.id}>{l.name}</option>
+                ))}
+              </SelectField>
+            ) : null}
+          </div>
+        ) : null}
         <Field label="Minimum stock" name="minStock" inputMode="decimal" defaultValue={defaults.minStock ?? ""} placeholder="0"
           hint="We'll warn you when stock goes below this." error={fe?.minStock} />
       </Card>
