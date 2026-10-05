@@ -11,6 +11,8 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    // Browser (Playwright) tests live in tests/e2e and run with `npm run test:e2e`.
+    include: ["tests/unit/**/*.test.ts", "tests/integration/**/*.test.ts"],
     globalSetup: ["tests/helpers/global-setup.ts"],
     setupFiles: ["tests/helpers/setup-env.ts"],
     // Integration tests share one database; run files one at a time.

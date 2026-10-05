@@ -64,7 +64,7 @@ export function PhotoInput({ name, defaultValue, error }: { name: string; defaul
         <div className="flex flex-col gap-2">
           <label className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-xl border border-line bg-surface px-4 text-sm font-semibold">
             <Camera className="size-4" aria-hidden /> {url ? "Change photo" : "Take or choose photo"}
-            <input ref={inputRef} type="file" accept="image/*" capture="environment" className="sr-only" onChange={(e) => upload(e.target.files?.[0])} disabled={busy} />
+            <input ref={inputRef} type="file" accept="image/*" className="sr-only" onChange={(e) => upload(e.target.files?.[0])} disabled={busy} />
           </label>
           {url ? (
             <button type="button" onClick={() => setUrl("")} className="inline-flex h-9 items-center gap-1 text-sm font-medium text-danger-600">

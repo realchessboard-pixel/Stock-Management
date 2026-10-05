@@ -66,3 +66,26 @@ input[type="number"] {
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom);
 }
+
+/*
+ * Phones: while typing, hide the bottom navigation and drop the sticky
+ * Confirm bar to the bottom edge, so the on-screen keyboard (Android
+ * resizes the page, see viewport.interactiveWidget) never hides it.
+ */
+@media (max-width: 1023px) {
+  body:has(:is(input:not([type="checkbox"], [type="radio"], [type="hidden"], [type="file"]), textarea):focus) .bottom-nav {
+    display: none;
+  }
+  body:has(:is(input:not([type="checkbox"], [type="radio"], [type="hidden"], [type="file"]), textarea):focus) .sticky-actions {
+    bottom: 0;
+  }
+}
+
+/* Remove the grey flash on tap and accidental text selection on buttons (Android). */
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+button {
+  user-select: none;
+}

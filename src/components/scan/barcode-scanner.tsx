@@ -128,7 +128,11 @@ export function BarcodeScanner({ onDetected, paused = false }: { onDetected: (co
           stopFn = () => controls.stop();
         }
 
-        const caps = (trackRef.current?.getCapabilities?.() ?? {}) as { torch?: boolean };
+        const caps = (trackRef.current?.getCapabilities?.() ?? {}) as { torch?: boolean; focusMode?: string[] };
+        // Android: continuous autofocus makes small barcodes read much faster.
+        if (caps.focusMode?.includes("continuous")) {
+          trackRef.current?.applyConstraints({ advanced: [{ focusMode: "continuous" } as MediaTrackConstraintSet] }).catch(() => {});
+        }
         setTorch({ supported: Boolean(caps.torch), on: false });
         setStatus("scanning");
       } catch (e) {
@@ -138,9 +142,24 @@ export function BarcodeScanner({ onDetected, paused = false }: { onDetected: (co
       }
     }
 
+    // Release the camera when the app goes to the background (Android keeps it
+    // locked otherwise, draining battery) and restart it when the user returns.
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        cancelled = true;
+        stopFn?.();
+        stopFn = null;
+      } else if (cancelled) {
+        setStatus("starting");
+        setAttempt((a) => a + 1);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
     start();
     return () => {
       cancelled = true;
+      document.removeEventListener("visibilitychange", onVisibility);
       stopFn?.();
       trackRef.current = null;
     };

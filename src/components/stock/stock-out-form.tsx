@@ -73,7 +73,7 @@ export function StockOutForm({
         <Field label="Note (optional)" name="note" placeholder="e.g. Customer name or bill no." autoComplete="off" error={fe?.note} />
       </Card>
 
-      <div className="sticky bottom-20 z-10 -mx-4 bg-canvas/95 px-4 py-3 backdrop-blur lg:bottom-0 lg:mx-0 lg:px-0">
+      <div className="sticky-actions sticky bottom-20 z-10 -mx-4 bg-canvas/95 px-4 py-3 backdrop-blur lg:bottom-0 lg:mx-0 lg:px-0">
         {n > 0 ? <p className="mb-2 text-center text-sm text-ink-muted">Value {formatMoney(n * Number(product.sellingPrice))}</p> : null}
         <SubmitButton pending={pending} size="xl" className="w-full bg-warn-600 hover:bg-warn-600/90" pendingText="Saving…" disabled={!(n > 0) || tooMany}>
           <ArrowUpFromLine className="size-6" aria-hidden />

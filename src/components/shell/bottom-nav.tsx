@@ -12,7 +12,7 @@ export function BottomNav({ role }: { role: RoleName }) {
   return (
     <nav
       aria-label="Main"
-      className="pb-safe fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 backdrop-blur lg:hidden"
+      className="bottom-nav pb-safe fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 backdrop-blur lg:hidden"
     >
       <ul className="mx-auto flex max-w-lg items-end justify-around px-2">
         {items.map((item) => {

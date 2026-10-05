@@ -10,6 +10,7 @@ import {
   ScanBarcode,
   type LucideIcon,
 } from "lucide-react";
+import { InstallBanner } from "@/components/pwa/pwa";
 import { OnboardingChecklist } from "@/components/common/onboarding-checklist";
 import { InOutChart } from "@/components/reports/in-out-chart";
 import { Card } from "@/components/ui/card";
@@ -74,6 +75,7 @@ export default async function DashboardPage() {
   return (
     <>
       <PageHeader title="Dashboard" subtitle={`Hello ${ctx.userName.split(" ")[0]} 👋`} />
+      <InstallBanner />
 
       <section aria-label="Quick actions" className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {actions.map(({ href, label, icon: Icon, tone }) => (

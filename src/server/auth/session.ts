@@ -5,6 +5,7 @@ import { cookies, headers } from "next/headers";
 import { db } from "@/server/db";
 import { env } from "@/server/env";
 import { SESSION_COOKIE, SESSION_MAX_AGE_SECONDS } from "@/lib/session-cookie";
+import { maybeRunMaintenance } from "@/server/maintenance";
 
 const EXTEND_WHEN_LESS_THAN_MS = 15 * 24 * 60 * 60 * 1000;
 
@@ -23,8 +24,19 @@ export function newToken(): string {
 
 export async function clientMeta() {
   const h = await headers();
-  const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || null;
-  return { ip, userAgent: h.get("user-agent")?.slice(0, 300) ?? null };
+  return { ip: clientIp(h), userAgent: h.get("user-agent")?.slice(0, 300) ?? null };
+}
+
+/**
+ * Client IP for rate limiting / audit. Clients can put anything at the
+ * START of X-Forwarded-For, so we use the address our own reverse proxy
+ * observed: X-Real-IP (Vercel, nginx) or else the LAST X-Forwarded-For hop.
+ */
+export function clientIp(h: Headers): string | null {
+  const real = h.get("x-real-ip")?.trim();
+  if (real) return real.slice(0, 64);
+  const hops = h.get("x-forwarded-for")?.split(",").map((s) => s.trim()).filter(Boolean);
+  return hops?.length ? hops[hops.length - 1].slice(0, 64) : null;
 }
 
 /** Creates a session row and sets the cookie. Call only from Server Actions / Route Handlers. */
@@ -109,6 +121,7 @@ export const getSession = cache(async (): Promise<SessionInfo | null> => {
     });
   }
 
+  maybeRunMaintenance();
   const { isActive: _ignored, ...user } = session.user;
   void _ignored;
   return { sessionId: session.id, user, business: session.business, role: membership.role };

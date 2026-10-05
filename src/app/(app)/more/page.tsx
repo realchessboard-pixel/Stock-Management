@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronRight, LogOut } from "lucide-react";
+import { InstallAppButton } from "@/components/pwa/pwa";
 import { MORE_NAV } from "@/components/shell/nav-config";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
@@ -35,6 +36,9 @@ export default async function MorePage() {
           ))}
         </ul>
       </Card>
+      <div className="mt-4">
+        <InstallAppButton />
+      </div>
       <form action={logoutAction} className="mt-4">
         <button
           type="submit"

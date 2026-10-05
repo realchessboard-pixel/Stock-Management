@@ -10,10 +10,13 @@ import { authenticate, registerBusiness } from "@/server/business/accounts";
 import { db } from "@/server/db";
 import { formDataToObject, parseInput, toActionError } from "./safe-action";
 
+// Configurable for shops sharing one public IP (e.g. a market's Wi-Fi) and for test runs.
+const SIGNUPS_PER_IP_PER_HOUR = Math.max(1, Number(process.env.SIGNUP_RATE_LIMIT_PER_HOUR) || 10);
+
 export async function signupAction(_prev: unknown, formData: FormData): Promise<ActionResult> {
   try {
     const meta = await clientMeta();
-    await rateLimit(`signup:ip:${meta.ip ?? "unknown"}`, 10, 60 * 60);
+    await rateLimit(`signup:ip:${meta.ip ?? "unknown"}`, SIGNUPS_PER_IP_PER_HOUR, 60 * 60);
     const input = parseInput(signupSchema, formDataToObject(formData));
     const { userId, businessId } = await registerBusiness(input, meta);
     await startSession(userId, businessId);

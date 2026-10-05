@@ -7,7 +7,9 @@ function createClient() {
   const adapter = new PrismaPg({ connectionString: env().DATABASE_URL });
   return new PrismaClient({
     adapter,
-    log: env().NODE_ENV === "development" ? ["warn", "error"] : ["error"],
+    // Handled errors (e.g. duplicate SKU) are expected; unhandled ones are
+    // logged once by src/instrumentation.ts, so production logs stay clean.
+    log: env().NODE_ENV === "development" ? ["warn", "error"] : ["warn"],
   });
 }
 

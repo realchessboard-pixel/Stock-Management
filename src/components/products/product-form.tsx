@@ -193,7 +193,7 @@ export function ProductForm({
         </div>
       </details>
 
-      <div className="sticky bottom-20 z-10 -mx-4 bg-canvas/95 px-4 py-3 backdrop-blur lg:bottom-0 lg:mx-0 lg:px-0">
+      <div className="sticky-actions sticky bottom-20 z-10 -mx-4 bg-canvas/95 px-4 py-3 backdrop-blur lg:bottom-0 lg:mx-0 lg:px-0">
         <SubmitButton pending={pending || state?.ok === true} size="xl" className="w-full" pendingText="Saving…">
           {mode === "create" ? "Save product" : "Save changes"}
         </SubmitButton>

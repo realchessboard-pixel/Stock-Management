@@ -15,7 +15,10 @@
     "db:migrate:dev": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
     "postinstall": "prisma generate",
-    "check": "npm run typecheck && npm run lint && npm run test"
+    "check": "npm run typecheck && npm run lint && npm run test",
+    "test:e2e": "playwright test",
+    "perf:seed": "node --conditions=react-server --import tsx scripts/perf-seed.ts",
+    "perf:check": "node --conditions=react-server --import tsx scripts/perf-check.ts"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.2.1",
@@ -53,7 +56,7 @@
     "vitest": "^5.0.3"
   },
   "engines": {
-    "node": ">=20.9"
+    "node": ">=20.9 <25"
   },
   "overrides": {
     "exceljs": {

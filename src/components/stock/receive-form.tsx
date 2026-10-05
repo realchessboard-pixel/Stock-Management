@@ -102,7 +102,7 @@ export function ReceiveForm({
         </details>
       </Card>
 
-      <div className="sticky bottom-20 z-10 -mx-4 bg-canvas/95 px-4 py-3 backdrop-blur lg:bottom-0 lg:mx-0 lg:px-0">
+      <div className="sticky-actions sticky bottom-20 z-10 -mx-4 bg-canvas/95 px-4 py-3 backdrop-blur lg:bottom-0 lg:mx-0 lg:px-0">
         {total > 0 ? <p className="mb-2 text-center text-sm text-ink-muted">Total value {formatMoney(total)}</p> : null}
         <SubmitButton pending={pending} variant="success" size="xl" className="w-full" pendingText="Saving…" disabled={!(Number(qty) > 0)}>
           <ArrowDownToLine className="size-6" aria-hidden />
